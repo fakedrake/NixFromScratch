@@ -2,8 +2,10 @@
 set -e
 set -x
 
-NIX_BOOT=`pwd`/boot
-NIX_ROOT=`pwd`/root
+system_packages="perl"
+
+NIX_BOOT=`pwd`/nixboot
+NIX_ROOT=`pwd`/nixroot
 rootdir=$(pwd)
 export nix_boot=${NIX_BOOT-$HOME/tmp/nix-boot}
 export nix_root=${NIX_ROOT-$HOME/nix}
@@ -61,16 +63,26 @@ for d in "$nix_root" "$nix_boot" "$pkgs" "$srcs"; do
     fi
 done
 
+function maybe_use_system {
+    for i in "$system_packages"; do
+        if [[ "$i" = "$1" ]]; then
+            echo "";
+            return 0
+        fi
+    done
+    return 1
+}
+
 function new_file {
     ls -t "$1" | head -1
 }
 
 function with_pkg {
-    if ! [ -f $pkgs/$(basename "$1") ]; then
-        wget $i;
+    if ! [ -f "$pkgs/$(basename "$1")" ]; then
+        wget "$1" -O "$pkgs/$(basename "$1")";
     fi
 
-    if ! [ -d "$srcs/$1"]; then
+    if ! [ -d "$srcs/$1" ]; then
         extract $(basename "$1") "$srcs"
     fi
 
@@ -78,20 +90,19 @@ function with_pkg {
 }
 
 function package_bzip2 {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (with_pkg "http://bzip.org/1.0.6/bzip2-1.0.6.tar.gz"
              make -f Makefile-libbz2_so;
              make install PREFIX=$nix_boot;
-             cp libbz2.so.1.0 libbz2.so.1.0.6 $nix_boot/lib; )
-            ;;
+             cp libbz2.so.1.0 libbz2.so.1.0.6 $nix_boot/lib) ;;
     esac
 }
 
 
 function package_curl {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (with_pkg "http://curl.haxx.se/download/curl-7.35.0.tar.lzma"
@@ -104,7 +115,7 @@ function package_curl {
 
 
 function package_sqlite {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (with_pkg "http://www.sqlite.org/2014/sqlite-autoconf-3080300.tar.gz"
@@ -117,7 +128,7 @@ function package_sqlite {
 
 
 function package_libxml2 {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/libxml2-2.9.2; ./configure --prefix=$nix_boot;
@@ -131,7 +142,7 @@ function package_libxml2 {
 
 
 function package_libxslt {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/libxslt-1.1.28;  ./configure --prefix=$nix_boot;
@@ -143,7 +154,7 @@ function package_libxslt {
 
 
 function package_gcc {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/gcc-4.9.2; ./contrib/download_prerequisites; )
@@ -158,7 +169,7 @@ function package_gcc {
 
 
 function package_bison {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/bison-3.0; ./configure --prefix=$nix_boot;
@@ -170,7 +181,7 @@ function package_bison {
 
 
 function package_flex {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/flex-2.5.39;  ./configure --prefix=$nix_boot;
@@ -182,7 +193,7 @@ function package_flex {
 
 
 function package_coreutils {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/coreutils-8.23;  ./configure --enable-install-program=hostname --prefix=$nix_boot;
@@ -194,7 +205,7 @@ function package_coreutils {
 
 
 function package_bash {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
             (cd $srcs/bash-4.3;  ./configure --prefix=$nix_boot;
@@ -206,74 +217,84 @@ function package_bash {
 
 
 function package_perl {
-    case "$1"; in
+    maybe_use_system "perl" && return 0
+    case "$1" in
         "deps") echo "";;
         "build")
-            (with_pkg "http://www.cpan.org/src/5.0/perl-5.20.1.tar.gz"
-             ./Configure -Dprefix="$nix_boot" -des
-             make -j8
-             make -j8 test
-             make install)
+            (
+                with_pkg "http://www.cpan.org/src/5.0/perl-5.20.1.tar.gz"
+                ./Configure -Dprefix="$nix_boot" -des
+                make -j8
+                make -j8 test
+                make install
+            )
             ;;
     esac
 }
 
 
 function package_dbi {
-    case "$1"; in
+    case "$1" in
         "deps") echo "perl";;
         "build")
-            (with_pkg "http://search.cpan.org/CPAN/authors/id/T/TI/TIMB/DBI-1.631.tar.gz"
-             perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
-             make;
-             make install; )
+            cpan DBI
+            # (
+            #     with_pkg "http://search.cpan.org/CPAN/authors/id/T/TI/TIMB/DBI-1.631.tar.gz"
+            #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
+            #     make;
+            #     make install;
+            # )
             ;;
     esac
 }
 
 
 function package_dbd {
-    case "$1"; in
+    case "$1" in
         "deps") echo "perl";;
         "build")
-            (with_pkg "http://search.cpan.org/CPAN/authors/id/I/IS/ISHIGAKI/DBD-SQLite-1.40.tar.gz"
-             perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
-             make;
-             make install; )
+            cpan DBD
+            # (
+            #     with_pkg "http://search.cpan.org/CPAN/authors/id/I/IS/ISHIGAKI/DBD-SQLite-1.40.tar.gz"
+            #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
+            #     make;
+            #     make install;
+            # )
             ;;
     esac
 }
 
 
 function package_wwwcurl {
-    case "$1"; in
+    case "$1" in
         "deps") echo "perl";;
         "build")
-            (with_pkg "http://search.cpan.org/CPAN/authors/id/S/SZ/SZBALINT/WWW-Curl-4.15.tar.gz"
-             perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
-             make;
-             make install;)
+            cpan WWW::Curl
+            # (
+            #     with_pkg "http://search.cpan.org/CPAN/authors/id/S/SZ/SZBALINT/WWW-Curl-4.15.tar.gz"
+            #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
+            #     make;
+            #     make install;
+            # )
             ;;
     esac
 }
 
 
 function package_bootstrap {
-    case "$1"; in
+    case "$1" in
         "deps") echo "";;
         "build")
-            rm -rf nix
-            git clone https://github.com/NixOS/nix nix
-            (cd $srcs/nix;
+            [[ ! -d $srcs/nix ]] && git clone https://github.com/NixOS/nix "$srcs/nix"
+            (cd "$srcs/nix";
              ./bootstrap.sh )
             ;;
     esac
 }
 
-
 function package_nix {
-    case "$1"; in
-        "deps") echo "perl" "nixconfig" "bootstrap";;
+    case "$1" in
+        "deps") echo "wwwcurl" "dbi" "dbd" "bootstrap";;
         "build")
             (with_pkg "https://nixos.org/releases/nix/nix-1.8/nix-1.8.tar.xz"
              echo "./configure --prefix=$nix_boot --with-store-dir=$nix_root/store --localstatedir=$nix_root/var" > myconfig.sh;
@@ -288,12 +309,11 @@ function package_nix {
 
 
 function package_nixconfig {
-    case "$1"; in
-        "deps") echo "";;
+    case "$1" in
+        "deps") echo "nix";;
         "build")
             nix-channel --add http://nixos.org/channels/nixpkgs-unstable && \
-                nix-channel --update && \
-                nix-env -iA nix -f $NIXPKGS
+                nix-channel --update # && nix-env -iA nix -f $NIXPKGS
             ;;
     esac
 }
@@ -301,9 +321,14 @@ function package_nixconfig {
 function install {
     cd $rootdir
     local package="$1"
-    for i in $package deps; do
+    for i in $("package_$package" deps); do
         install $i;
     done
 
-    $package build
+    "package_$package" build
 }
+
+while [[ $# -gt 0 ]]; do
+    install "$1"
+    shift
+done
