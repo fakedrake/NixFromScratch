@@ -2,7 +2,7 @@
 set -e
 set -x
 
-system_packages="perl"
+system_packages=""
 
 NIX_BOOT=`pwd`/nixboot
 NIX_ROOT=`pwd`/nixroot
@@ -78,11 +78,11 @@ function new_file {
 }
 
 function with_pkg {
-    if ! [ -f "$pkgs/$(basename "$1")" ]; then
+    if [[ ! -f "$pkgs/$(basename "$1")" ]]; then
         wget "$1" -O "$pkgs/$(basename "$1")";
     fi
 
-    if ! [ -d "$srcs/$1" ]; then
+    if [[ ! -d "$srcs/$1" ]]; then
         extract $(basename "$1") "$srcs"
     fi
 
