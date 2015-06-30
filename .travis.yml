@@ -1,0 +1,10 @@
+language: bash
+script:
+    - bash ./from-scratch.sh nixconfig
+
+notifications:
+  email:
+    - cperivol@csail.mit.edu
+
+  on_success: always
+  on_failure: always
