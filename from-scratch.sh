@@ -237,7 +237,7 @@ function package_dbi {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            cpan DBI
+            yes | cpan DBI
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/T/TI/TIMB/DBI-1.631.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
@@ -253,7 +253,7 @@ function package_dbd {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            cpan DBD
+            yes | cpan DBD
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/I/IS/ISHIGAKI/DBD-SQLite-1.40.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
@@ -269,7 +269,7 @@ function package_wwwcurl {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            cpan WWW::Curl
+            yes | cpan WWW::Curl
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/S/SZ/SZBALINT/WWW-Curl-4.15.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
