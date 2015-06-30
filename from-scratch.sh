@@ -19,8 +19,8 @@ export CPPFLAGS="-I$nix_boot/include $CPPFLAGS"
 #export PERL5OPT="-I$nix_boot/lib64/perl5"
 export NIXPKGS=$NIX_ROOT/nixpkgs
 all="perl dbi dbd wwwcurl bootstrap nix"
-pkgs=$(pwd)/packages/
-srcs=$(pwd)/sources/
+pkgs=$(pwd)/packages
+srcs=$(pwd)/sources
 
 function extract {
     if [ -z "$1" ]; then
@@ -74,16 +74,26 @@ function maybe_use_system {
 }
 
 function new_file {
-    ls -t "$1" | head -1
+    echo $1/$(ls -t "$1" | head -1)
 }
 
+# with_pkg <url> <root-dir-in-pack>
 function with_pkg {
-    if [[ ! -f "$pkgs/$(basename "$1")" ]]; then
-        wget "$1" -O "$pkgs/$(basename "$1")";
+    local url="$1"
+    local pack="$pkgs/$(basename "$1")"
+    local srcdir=$srcs/$(basename "$1" | sed -n 's/\.\(tar\|zip\).*//p')
+
+    if [[ ! -f "$pack" ]]; then
+        wget "$url" -O "$pack";
     fi
 
-    if [[ ! -d "$srcs/$1" ]]; then
-        extract $(basename "$1") "$srcs"
+    if [[ ! -d "$srcdir" ]]; then
+        extract "$pack" "$srcs"
+    fi
+
+    if [[ ! "$(new_file "$srcs")" = "$srcdir" ]]; then
+        echo "Expected to extract '$srcdir' but extracted '$(new_file "$srcs")'" 1>&2
+        exit 1;
     fi
 
     cd $(new_file "$srcs/")
