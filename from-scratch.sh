@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-set -x
 
 system_packages=""
 
@@ -22,6 +21,21 @@ all="perl dbi dbd wwwcurl bootstrap nix"
 pkgs=$(pwd)/packages
 srcs=$(pwd)/sources
 
+function linelogger {
+    local fn="$1"
+    local inc=0
+
+    while read ln; do
+        inc=$(($inc+1))
+        if [[ -n "$DEBUG" ]]; then
+            echo ln
+        elif [[ $inc -gt 100 ]]; then
+            echo "[$fn: $(date "+%H:%M:%S")] produced $inc lines..."
+            inc=0
+        fi
+    done
+}
+
 function extract {
     if [ -z "$1" ]; then
         # display usage if no parameters given
@@ -36,16 +50,16 @@ function extract {
 
     if [ -f $pkg ] ; then
         case $pkg in
-            *.tar.bz2) tar xvjf $pkg ;;
-            *.tar.gz) tar xvzf $pkg;;
-            *.tar.xz) tar xvJf $pkg;;
+            *.tar.bz2) tar xjf $pkg ;;
+            *.tar.gz) tar xzf $pkg;;
+            *.tar.xz) tar xJf $pkg;;
             *.lzma) unlzma $pkg ;;
             *.bz2) bunzip2 $pkg ;;
             *.rar) unrar x -ad $pkg ;;
             *.gz) gunzip $pkg ;;
-            *.tar) tar xvf $pkg ;;
-            *.tbz2) tar xvjf $pkg ;;
-            *.tgz) tar xvzf $pkg ;;
+            *.tar) tar xf $pkg ;;
+            *.tbz2) tar xjf $pkg ;;
+            *.tgz) tar xzf $pkg ;;
             *.zip) unzip $pkg ;;
             *.Z) uncompress $pkg ;;
             *.7z) 7z x $pkg ;;
@@ -233,10 +247,11 @@ function package_perl {
         "build")
             (
                 with_pkg "http://www.cpan.org/src/5.0/perl-5.20.1.tar.gz"
-                ./Configure -Dprefix="$nix_boot" -des
-                make -j8
-                make -j8 test
-                make install
+                ./Configure -Dprefix="$nix_boot" -des | linelogger perl_conf
+                echo "Building perl..."
+                make -j8 | linelogger perl_build
+                make -j8 test | linelogger perl_test
+                make install | linelogger perl_install
             )
             ;;
     esac
@@ -247,7 +262,7 @@ function package_dbi {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            yes | cpan DBI
+            cpan DBI
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/T/TI/TIMB/DBI-1.631.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
@@ -263,7 +278,7 @@ function package_dbd {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            yes | cpan DBD
+            cpan DBD
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/I/IS/ISHIGAKI/DBD-SQLite-1.40.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
@@ -279,7 +294,7 @@ function package_wwwcurl {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            yes | cpan WWW::Curl
+            cpan WWW::Curl
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/S/SZ/SZBALINT/WWW-Curl-4.15.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
@@ -316,7 +331,6 @@ function package_nix {
             ;;
     esac
 }
-
 
 function package_nixconfig {
     case "$1" in
