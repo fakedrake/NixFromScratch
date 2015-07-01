@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x
 
 system_packages=""
 
@@ -121,6 +122,7 @@ function package_bzip2 {
              make -f Makefile-libbz2_so;
              make install PREFIX=$nix_boot;
              cp libbz2.so.1.0 libbz2.so.1.0.6 $nix_boot/lib) ;;
+        *) false;;
     esac
 }
 
@@ -134,6 +136,7 @@ function package_curl {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -147,6 +150,7 @@ function package_sqlite {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -161,6 +165,7 @@ function package_libxml2 {
              # make install;
             )
             ;;
+        *) false;;
     esac
 }
 
@@ -173,6 +178,7 @@ function package_libxslt {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -188,6 +194,7 @@ function package_gcc {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -200,6 +207,7 @@ function package_bison {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -212,6 +220,7 @@ function package_flex {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -224,6 +233,7 @@ function package_coreutils {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -236,6 +246,7 @@ function package_bash {
              make;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -244,6 +255,10 @@ function package_perl {
     maybe_use_system "perl" && return 0
     case "$1" in
         "deps") echo "";;
+        "check")
+            if ! ([[ -f $nix_boot/bin/perl ]] && [[ -f $nix_boot/bin/cpan ]]); then
+                false;
+            fi ;;
         "build")
             (
                 with_pkg "http://www.cpan.org/src/5.0/perl-5.20.1.tar.gz"
@@ -252,8 +267,10 @@ function package_perl {
                 make -j8 | linelogger perl_build
                 make -j8 test | linelogger perl_test
                 make install | linelogger perl_install
+                echo "Local perl built successfuly in $(pwd)"
             )
             ;;
+        *) false;;
     esac
 }
 
@@ -270,6 +287,7 @@ function package_dbi {
             #     make install;
             # )
             ;;
+        *) false;;
     esac
 }
 
@@ -286,6 +304,7 @@ function package_dbd {
             #     make install;
             # )
             ;;
+        *) false;;
     esac
 }
 
@@ -302,6 +321,8 @@ function package_wwwcurl {
             #     make install;
             # )
             ;;
+        *) false;;
+
     esac
 }
 
@@ -314,6 +335,7 @@ function package_bootstrap {
             (cd "$srcs/nix";
              ./bootstrap.sh )
             ;;
+        *) false;;
     esac
 }
 
@@ -329,6 +351,7 @@ function package_nix {
              make -j8;
              make install; )
             ;;
+        *) false;;
     esac
 }
 
@@ -339,6 +362,7 @@ function package_nixconfig {
             nix-channel --add http://nixos.org/channels/nixpkgs-unstable && \
                 nix-channel --update # && nix-env -iA nix -f $NIXPKGS
             ;;
+        *) false;;
     esac
 }
 
@@ -346,7 +370,9 @@ function install {
     cd $rootdir
     local package="$1"
     for i in $("package_$package" deps); do
-        install $i;
+        if ! "package_$i" check; then
+            install $i;
+        fi
     done
 
     "package_$package" build
