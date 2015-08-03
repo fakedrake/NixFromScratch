@@ -92,11 +92,11 @@ function new_file {
     echo $1/$(ls -t "$1" | head -1)
 }
 
-# with_pkg <url> <root-dir-in-pack>
+# with_pkg <url> [<root-dir-in-pack>]
 function with_pkg {
     local url="$1"
     local pack="$pkgs/$(basename "$1")"
-    local srcdir=$srcs/$(basename "$1" | sed -n 's/\.\(tar\|zip\).*//p')
+    local srcdir=$srcs/${2:-$(basename "$1" | sed -n 's/\.\(tar\|zip\).*//p')}
 
     if [[ ! -f "$pack" ]]; then
         wget "$url" -O "$pack";
@@ -122,7 +122,7 @@ function package_bzip2 {
              make -f Makefile-libbz2_so;
              make install PREFIX=$nix_boot;
              cp libbz2.so.1.0 libbz2.so.1.0.6 $nix_boot/lib) ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -136,7 +136,7 @@ function package_curl {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -150,7 +150,7 @@ function package_sqlite {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -165,7 +165,7 @@ function package_libxml2 {
              # make install;
             )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -178,7 +178,7 @@ function package_libxslt {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -194,7 +194,7 @@ function package_gcc {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -207,7 +207,7 @@ function package_bison {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -220,7 +220,7 @@ function package_flex {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -233,7 +233,7 @@ function package_coreutils {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -246,7 +246,7 @@ function package_bash {
              make;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -257,7 +257,7 @@ function package_perl {
         "deps") echo "";;
         "check")
             if ! ([[ -f $nix_boot/bin/perl ]] && [[ -f $nix_boot/bin/cpan ]]); then
-                false;
+                return 1
             fi ;;
         "build")
             (
@@ -270,7 +270,7 @@ function package_perl {
                 echo "Local perl built successfuly in $(pwd)"
             )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -287,7 +287,7 @@ function package_dbi {
             #     make install;
             # )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -296,7 +296,7 @@ function package_dbd {
     case "$1" in
         "deps") echo "perl";;
         "build")
-            cpan DBD
+            cpan Class::HPLOO::Base DBD::SQLite
             # (
             #     with_pkg "http://search.cpan.org/CPAN/authors/id/I/IS/ISHIGAKI/DBD-SQLite-1.40.tar.gz"
             #     perl Makefile.PL PREFIX=$nix_boot PERLMAINCC=$nix_boot/bin/gcc;
@@ -304,10 +304,9 @@ function package_dbd {
             #     make install;
             # )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
-
 
 function package_wwwcurl {
     case "$1" in
@@ -321,7 +320,7 @@ function package_wwwcurl {
             #     make install;
             # )
             ;;
-        *) false;;
+        *) return 1;;
 
     esac
 }
@@ -335,7 +334,7 @@ function package_bootstrap {
             (cd "$srcs/nix";
              ./bootstrap.sh )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -343,7 +342,7 @@ function package_nix {
     case "$1" in
         "deps") echo "wwwcurl" "dbi" "dbd" "bootstrap";;
         "build")
-            (with_pkg "https://nixos.org/releases/nix/nix-1.8/nix-1.8.tar.xz"
+            (with_pkg "https://nixos.org/releases/nix/nix-1.8/nix-1.8.tar.xz" "nix"
              echo "./configure --prefix=$nix_boot --with-store-dir=$nix_root/store --localstatedir=$nix_root/var" > myconfig.sh;
              ./configure --prefix=$nix_root --with-store-dir=$nix_root/store --localstatedir=$nix_root/var --enable-static  --enable-static-nix ;
              perl -pi -e 's#--nonet# #g' doc/manual/local.mk;
@@ -351,7 +350,7 @@ function package_nix {
              make -j8;
              make install; )
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -362,7 +361,7 @@ function package_nixconfig {
             nix-channel --add http://nixos.org/channels/nixpkgs-unstable && \
                 nix-channel --update # && nix-env -iA nix -f $NIXPKGS
             ;;
-        *) false;;
+        *) return 1;;
     esac
 }
 
@@ -371,7 +370,7 @@ function install {
     local package="$1"
     for i in $("package_$package" deps); do
         if ! "package_$i" check; then
-            install $i;
+            install "$i";
         fi
     done
 
